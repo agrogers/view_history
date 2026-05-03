@@ -1,0 +1,9 @@
+.o_view_history_menu {
+    min-width: 320px;
+}
+
+@media (max-width: 767.98px) {
+    .o_view_history_menu {
+        left: 50px !important;
+    }
+}

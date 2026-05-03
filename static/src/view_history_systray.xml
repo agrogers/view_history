@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="view_history.ViewHistorySystray">
+        <div class="o_menu_systray_item o_view_history_systray">
+            <Dropdown onOpened.bind="onOpened" menuClass="'o_view_history_menu'">
+                <button class="py-1 border-0 bg-transparent">
+                    <i class="fa fa-history" role="img" t-att-title="labels.history" aria-label="View history"/>
+                </button>
+                <t t-set-slot="content">
+                    <t t-foreach="state.items" t-as="item" t-key="item.id">
+                        <DropdownItem onSelected="() => this.openItem(item)">
+                            <div class="o_view_history_item d-flex align-items-center">
+                                <img t-if="item.icon_url" t-att-src="item.icon_url" class="me-2 rounded" style="width:24px;height:24px;object-fit:contain;" loading="lazy"/>
+                                <div class="o_view_history_item_name text-truncate" t-esc="item.display_name || item.model_name"/>
+                                <!-- <div class="o_view_history_item_meta text-muted small">
+                                    <span t-esc="item.model_name"/>
+                                    <span class="ms-1" t-esc="item.res_id"/>
+                                </div> -->
+                            </div>
+                        </DropdownItem>
+                    </t>
+                </t>
+            </Dropdown>
+        </div>
+    </t>
+</templates>
