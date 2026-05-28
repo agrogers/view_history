@@ -63,14 +63,28 @@ class ViewHistory(models.Model):
         if not records:
             return []
 
+        all_models = list(set(records.mapped("model")))
         model_names = {}
         model_modules = {}
-        for item in self.env["ir.model"].search(
-            [("model", "in", list(set(records.mapped("model"))))]
-        ):
+        for item in self.env["ir.model"].search([("model", "in", all_models)]):
             model_names[item.model] = item.name
             if item.modules:
                 model_modules[item.model] = item.modules.split(", ")[0]
+
+        # Find the primary action (with a path set) for each model so the
+        # history systray can navigate to the correct app context.
+        model_actions = {}
+        for action in self.env["ir.actions.act_window"].search(
+            [("res_model", "in", all_models), ("path", "!=", False)],
+            order="id asc",
+        ):
+            # Keep only the first match per model (lowest id = most fundamental action)
+            if action.res_model not in model_actions:
+                model_actions[action.res_model] = {
+                    "action_id": action.id,
+                    "action_path": action.path,
+                }
+
         items = []
         for record in records:
             model = record.model
@@ -79,9 +93,9 @@ class ViewHistory(models.Model):
             if target_model is None:
                 continue
             try:
-                target_model.check_access_rights("read")
+                target_model.check_access("read")
                 target = target_model.browse(res_id)
-                target.check_access_rule("read")
+                target.check_access("read")
             except AccessError:
                 continue
             if not target.exists():
@@ -98,15 +112,15 @@ class ViewHistory(models.Model):
             display_name = target.display_name
             if model == "account.move" and hasattr(target, "partner_id") and target.partner_id:
                 display_name = f"{display_name} - {target.partner_id.name}"
-            items.append(
-                {
-                    "id": record.id,
-                    "model": model,
-                    "model_name": model_names.get(model, model),
-                    "res_id": res_id,
-                    "display_name": display_name,
-                    "viewed_at": record.viewed_at,
-                    "icon_url": icon_url,
-                }
-            )
+            item_data = {
+                "id": record.id,
+                "model": model,
+                "model_name": model_names.get(model, model),
+                "res_id": res_id,
+                "display_name": display_name,
+                "viewed_at": record.viewed_at,
+                "icon_url": icon_url,
+            }
+            item_data.update(model_actions.get(model, {}))
+            items.append(item_data)
         return items

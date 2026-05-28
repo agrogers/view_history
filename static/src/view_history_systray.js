@@ -46,13 +46,27 @@ export class ViewHistorySystray extends Component {
         if (!item || !item.model || !item.res_id) {
             return;
         }
-        this.action.doAction({
+        // Use the action_id / action_path supplied by the server (from ir.actions.act_window
+        // rows that have a path set) so the correct app menu is highlighted regardless of
+        // which app the user is currently in when they click a history entry.
+        const action = {
             type: "ir.actions.act_window",
             res_model: item.model,
             res_id: item.res_id,
             views: [[false, "form"]],
             target: "current",
-        });
+        };
+        if (item.action_id) {
+            action.id = item.action_id;
+        }
+        if (item.action_path) {
+            action.path = item.action_path;
+        }
+        // Always navigate to the record's own app context, not stacked on top of
+        // whatever app the user is currently in.  Without clearBreadcrumbs the
+        // parent action ("contacts", etc.) stays in the action stack and its path
+        // ends up prepended to the URL, causing the wrong menu to highlight.
+        this.action.doAction(action, { clearBreadcrumbs: true });
     }
 }
 
