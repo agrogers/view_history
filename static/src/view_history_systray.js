@@ -66,7 +66,10 @@ export class ViewHistorySystray extends Component {
         // whatever app the user is currently in.  Without clearBreadcrumbs the
         // parent action ("contacts", etc.) stays in the action stack and its path
         // ends up prepended to the URL, causing the wrong menu to highlight.
-        this.action.doAction(action, { clearBreadcrumbs: true });
+        this.action.doAction(action, { clearBreadcrumbs: true }).catch(() => {
+            // Record may have been deleted since the list was loaded — refresh the list.
+            this.loadItems();
+        });
     }
 }
 

@@ -1,5 +1,6 @@
 from odoo import api, fields, models
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, MissingError
+from odoo.fields import Binary, Image
 
 
 class ViewHistory(models.Model):
@@ -86,32 +87,41 @@ class ViewHistory(models.Model):
                 }
 
         items = []
+        seen = set()
         for record in records:
             model = record.model
             res_id = record.res_id
+            key = (model, res_id)
+            if key in seen:
+                continue
+            seen.add(key)
             target_model = self.env.get(model)
             if target_model is None:
                 continue
             try:
-                target_model.check_access("read")
-                target = target_model.browse(res_id)
-                target.check_access("read")
-            except AccessError:
+                try:
+                    target_model.check_access("read")
+                    target = target_model.browse(res_id)
+                    target.check_access("read")
+                except AccessError:
+                    continue
+                if not target.exists():
+                    continue
+                icon_url = False
+                for icon_field in ("type_icon", "icon", "image_1920", "image", "image_128", "subject_icon", "avatar_image"):
+                    field_def = target._fields.get(icon_field)
+                    if field_def and isinstance(field_def, (Image, Binary)) and target[icon_field]:
+                        icon_url = f"/web/image/{model}/{res_id}/{icon_field}"
+                        break
+                if not icon_url:
+                    module_name = model_modules.get(model)
+                    if module_name:
+                        icon_url = f"/{module_name}/static/description/icon.png"
+                display_name = target.display_name
+                if model == "account.move" and hasattr(target, "partner_id") and target.partner_id:
+                    display_name = f"{display_name} - {target.partner_id.name}"
+            except (MissingError, Exception):
                 continue
-            if not target.exists():
-                continue
-            icon_url = False
-            for icon_field in ("type_icon", "icon", "image_1920"):
-                if icon_field in target._fields and target[icon_field]:
-                    icon_url = f"/web/image/{model}/{res_id}/{icon_field}"
-                    break
-            if not icon_url:
-                module_name = model_modules.get(model)
-                if module_name:
-                    icon_url = f"/{module_name}/static/description/icon.png"
-            display_name = target.display_name
-            if model == "account.move" and hasattr(target, "partner_id") and target.partner_id:
-                display_name = f"{display_name} - {target.partner_id.name}"
             item_data = {
                 "id": record.id,
                 "model": model,
