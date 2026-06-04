@@ -67,7 +67,7 @@ class ViewHistory(models.Model):
         all_models = list(set(records.mapped("model")))
         model_names = {}
         model_modules = {}
-        for item in self.env["ir.model"].search([("model", "in", all_models)]):
+        for item in self.env["ir.model"].sudo().search([("model", "in", all_models)]):
             model_names[item.model] = item.name
             if item.modules:
                 model_modules[item.model] = item.modules.split(", ")[0]
@@ -75,7 +75,7 @@ class ViewHistory(models.Model):
         # Find the primary action (with a path set) for each model so the
         # history systray can navigate to the correct app context.
         model_actions = {}
-        for action in self.env["ir.actions.act_window"].search(
+        for action in self.env["ir.actions.act_window"].sudo().search(
             [("res_model", "in", all_models), ("path", "!=", False)],
             order="id asc",
         ):
@@ -117,9 +117,9 @@ class ViewHistory(models.Model):
                     module_name = model_modules.get(model)
                     if module_name:
                         icon_url = f"/{module_name}/static/description/icon.png"
-                display_name = target.display_name
-                if model == "account.move" and hasattr(target, "partner_id") and target.partner_id:
-                    display_name = f"{display_name} - {target.partner_id.name}"
+                display_name = target.sudo().display_name
+                if model == "account.move" and hasattr(target, "partner_id") and target.sudo().partner_id:
+                    display_name = f"{display_name} - {target.sudo().partner_id.name}"
             except (MissingError, Exception):
                 continue
             item_data = {
