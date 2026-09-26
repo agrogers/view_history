@@ -1,6 +1,17 @@
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, MissingError
 from odoo.fields import Binary, Image
+from odoo.tools.image import image_data_uri
+
+
+class IrModel(models.Model):
+    _inherit = "ir.model"
+
+    view_history_icon = fields.Image(
+        string="View History Icon",
+        max_width=128,
+        max_height=128,
+    )
 
 
 class ViewHistory(models.Model):
@@ -67,10 +78,13 @@ class ViewHistory(models.Model):
         all_models = list(set(records.mapped("model")))
         model_names = {}
         model_modules = {}
+        model_icons = {}
         for item in self.env["ir.model"].sudo().search([("model", "in", all_models)]):
             model_names[item.model] = item.name
             if item.modules:
                 model_modules[item.model] = item.modules.split(", ")[0]
+            if item.view_history_icon:
+                model_icons[item.model] = image_data_uri(item.view_history_icon)
 
         # Find the primary action (with a path set) for each model so the
         # history systray can navigate to the correct app context.
@@ -114,9 +128,13 @@ class ViewHistory(models.Model):
                         icon_url = f"/web/image/{model}/{res_id}/{icon_field}"
                         break
                 if not icon_url:
+                    icon_url = model_icons.get(model)
+                if not icon_url:
                     module_name = model_modules.get(model)
                     if module_name:
                         icon_url = f"/{module_name}/static/description/icon.png"
+                if not icon_url:
+                    icon_url = "/view_history/static/description/icon.png"
                 display_name = target.sudo().display_name
                 if model == "account.move" and hasattr(target, "partner_id") and target.sudo().partner_id:
                     display_name = f"{display_name} - {target.sudo().partner_id.name}"

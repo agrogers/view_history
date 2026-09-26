@@ -42,6 +42,12 @@ export class ViewHistorySystray extends Component {
         this.loadItems();
     }
 
+    onIconError(event) {
+        const image = event.currentTarget;
+        image.onerror = null;
+        image.src = "/view_history/static/description/icon.png";
+    }
+
     openItem(item) {
         if (!item || !item.model || !item.res_id) {
             return;

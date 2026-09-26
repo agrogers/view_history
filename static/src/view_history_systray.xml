@@ -10,7 +10,7 @@
                     <t t-foreach="state.items" t-as="item" t-key="item.id">
                         <DropdownItem onSelected="() => this.openItem(item)">
                             <div class="o_view_history_item d-flex align-items-center">
-                                <img t-if="item.icon_url" t-att-src="item.icon_url" class="me-2 rounded" style="width:24px;height:24px;object-fit:contain;" loading="lazy"/>
+                                <img t-if="item.icon_url" t-att-src="item.icon_url" t-on-error="onIconError" class="me-2 rounded" style="width:24px;height:24px;object-fit:contain;" loading="lazy"/>
                                 <div class="o_view_history_item_name text-truncate" t-esc="item.display_name || item.model_name"/>
                                 <!-- <div class="o_view_history_item_meta text-muted small">
                                     <span t-esc="item.model_name"/>

@@ -9,6 +9,7 @@
         'security/ir.model.access.csv',
         'security/view_history_rules.xml',
         'views/res_users_view.xml',
+        'views/ir_model_views.xml',
     ],
     'assets': {
         'web.assets_backend': [
