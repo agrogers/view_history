@@ -57,6 +57,26 @@ class ViewHistory(models.Model):
         return True
 
     @api.model
+    def log_list(self, model):
+        if not model or not self.env.user.log_view_history:
+            return False
+        target_model = self.env.get(model)
+        if target_model is None:
+            return False
+        try:
+            target_model.check_access("read")
+        except AccessError:
+            return False
+        self.sudo().create(
+            {
+                "user_id": self.env.user.id,
+                "model": model,
+                "res_id": 0,
+            }
+        )
+        return True
+
+    @api.model
     def get_recent(self, limit=50):
         if not self.env.user.log_view_history:
             return []
@@ -111,6 +131,24 @@ class ViewHistory(models.Model):
             seen.add(key)
             target_model = self.env.get(model)
             if target_model is None:
+                continue
+            if res_id == 0:
+                try:
+                    target_model.check_access("read")
+                except AccessError:
+                    continue
+                item_data = {
+                    "id": record.id,
+                    "model": model,
+                    "model_name": model_names.get(model, model),
+                    "res_id": 0,
+                    "display_name": model_names.get(model, model),
+                    "viewed_at": record.viewed_at,
+                    "icon_url": False,
+                    "is_list": True,
+                }
+                item_data.update(model_actions.get(model, {}))
+                items.append(item_data)
                 continue
             try:
                 try:

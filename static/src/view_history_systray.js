@@ -49,7 +49,7 @@ export class ViewHistorySystray extends Component {
     }
 
     openItem(item) {
-        if (!item || !item.model || !item.res_id) {
+        if (!item || !item.model) {
             return;
         }
         // Use the action_id / action_path supplied by the server (from ir.actions.act_window
@@ -58,10 +58,12 @@ export class ViewHistorySystray extends Component {
         const action = {
             type: "ir.actions.act_window",
             res_model: item.model,
-            res_id: item.res_id,
-            views: [[false, "form"]],
+            views: item.is_list ? [[false, "list"], [false, "form"]] : [[false, "form"]],
             target: "current",
         };
+        if (!item.is_list) {
+            action.res_id = item.res_id;
+        }
         if (item.action_id) {
             action.id = item.action_id;
         }
