@@ -37,7 +37,7 @@ class ViewHistory(models.Model):
         if not self.env.user.log_view_history:
             return False
         target_model = self.env.get(model)
-        if target_model is None:
+        if target_model is None or target_model._transient:
             return False
         try:
             res_id = int(res_id)
@@ -61,7 +61,7 @@ class ViewHistory(models.Model):
         if not model or not self.env.user.log_view_history:
             return False
         target_model = self.env.get(model)
-        if target_model is None:
+        if target_model is None or target_model._transient:
             return False
         try:
             target_model.check_access("read")
@@ -130,13 +130,20 @@ class ViewHistory(models.Model):
                 continue
             seen.add(key)
             target_model = self.env.get(model)
-            if target_model is None:
+            if target_model is None or target_model._transient:
                 continue
             if res_id == 0:
                 try:
                     target_model.check_access("read")
                 except AccessError:
                     continue
+                icon_url = model_icons.get(model)
+                if not icon_url:
+                    module_name = model_modules.get(model)
+                    if module_name:
+                        icon_url = f"/{module_name}/static/description/icon.png"
+                if not icon_url:
+                    icon_url = "/view_history/static/description/icon.png"
                 item_data = {
                     "id": record.id,
                     "model": model,
@@ -144,7 +151,7 @@ class ViewHistory(models.Model):
                     "res_id": 0,
                     "display_name": model_names.get(model, model),
                     "viewed_at": record.viewed_at,
-                    "icon_url": False,
+                    "icon_url": icon_url,
                     "is_list": True,
                 }
                 item_data.update(model_actions.get(model, {}))

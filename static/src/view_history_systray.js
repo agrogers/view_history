@@ -57,6 +57,7 @@ export class ViewHistorySystray extends Component {
         // which app the user is currently in when they click a history entry.
         const action = {
             type: "ir.actions.act_window",
+            name: item.display_name || item.model_name,
             res_model: item.model,
             views: item.is_list ? [[false, "list"], [false, "form"]] : [[false, "form"]],
             target: "current",
