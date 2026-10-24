@@ -13,7 +13,7 @@ patch(View.prototype, {
         const { resModel, type } = props;
         this.Controller = class extends Controller {
             setup() {
-                super.setup(...arguments);
+                super.setup?.(...arguments);
                 const orm = useService("orm");
 
                 useEffect(
