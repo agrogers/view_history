@@ -49,6 +49,23 @@ export class ViewHistorySystray extends Component {
     }
 
     openItem(item) {
+        if (item?.is_client_action) {
+            const actionRequest = item.action_id
+                ? item.action_id
+                : {
+                      type: "ir.actions.client",
+                      tag: item.action_tag,
+                      name: item.display_name,
+                      params: item.action_params || {},
+                      context: item.action_context || {},
+                      path: item.action_path || undefined,
+                      target: item.action_target || undefined,
+                  };
+            this.action.doAction(actionRequest, { clearBreadcrumbs: true }).catch(() => {
+                this.loadItems();
+            });
+            return;
+        }
         if (!item || !item.model) {
             return;
         }

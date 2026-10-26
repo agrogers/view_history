@@ -29,6 +29,12 @@ class ViewHistory(models.Model):
     model = fields.Char(required=True, index=True)
     res_id = fields.Integer(required=True, index=True)
     viewed_at = fields.Datetime(required=True, default=fields.Datetime.now, index=True)
+    client_action_tag = fields.Char(index=True)
+    client_action_name = fields.Char()
+    client_action_params = fields.Json()
+    client_action_context = fields.Json()
+    client_action_path = fields.Char()
+    client_action_target = fields.Char()
 
     @api.model
     def log_view(self, model, res_id):
@@ -77,6 +83,51 @@ class ViewHistory(models.Model):
         return True
 
     @api.model
+    def log_client_action(
+        self, tag, name=False, action_id=False, params=False, context=False, path=False, target=False
+    ):
+        if not tag or not self.env.user.log_view_history:
+            return False
+        if not isinstance(tag, str) or not tag.strip():
+            return False
+
+        try:
+            action_id = int(action_id) if action_id else 0
+        except (TypeError, ValueError):
+            return False
+        if action_id < 0:
+            return False
+        action_name = name if isinstance(name, str) else False
+        action_params = params if isinstance(params, dict) else {}
+        action_context = context if isinstance(context, dict) else {}
+        action_path = path if isinstance(path, str) else False
+        action_target = target if isinstance(target, str) else False
+        if action_id:
+            action = self.env["ir.actions.client"].browse(action_id).exists()
+            if not action or action.tag != tag:
+                return False
+            try:
+                action.check_access("read")
+            except AccessError:
+                return False
+            action_name = action_name or action.display_name
+
+        self.sudo().create(
+            {
+                "user_id": self.env.user.id,
+                "model": "ir.actions.client",
+                "res_id": action_id,
+                "client_action_tag": tag,
+                "client_action_name": action_name or tag,
+                "client_action_params": action_params,
+                "client_action_context": action_context,
+                "client_action_path": action_path,
+                "client_action_target": action_target,
+            }
+        )
+        return True
+
+    @api.model
     def get_recent(self, limit=50):
         if not self.env.user.log_view_history:
             return []
@@ -120,17 +171,78 @@ class ViewHistory(models.Model):
                     "action_path": action.path,
                 }
 
+        client_action_ids = {
+            record.res_id
+            for record in records
+            if record.client_action_tag and record.res_id
+        }
+        client_action_icons = {}
+        if client_action_ids:
+            action_refs = [
+                f"ir.actions.client,{action_id}" for action_id in client_action_ids
+            ]
+            menus = self.env["ir.ui.menu"].with_context(
+                {"ir.ui.menu.full_list": False}
+            ).search([("action", "in", action_refs)])
+            # Prefer the most specific visible menu when an action has multiple menu entries.
+            for menu in menus.sorted(
+                lambda item: (item.parent_path or "").count("/"),
+                reverse=True,
+            ):
+                action = menu.action
+                if (
+                    action
+                    and action._name == "ir.actions.client"
+                    and action.id in client_action_ids
+                    and menu.web_icon_data
+                ):
+                    client_action_icons.setdefault(
+                        action.id,
+                        image_data_uri(menu.web_icon_data),
+                    )
+
         items = []
         seen = set()
         for record in records:
             model = record.model
             res_id = record.res_id
-            key = (model, res_id)
+            key = (model, res_id, record.client_action_tag or False)
             if key in seen:
                 continue
             seen.add(key)
             target_model = self.env.get(model)
             if target_model is None or target_model._transient:
+                continue
+            if record.client_action_tag:
+                if res_id:
+                    try:
+                        target_model.check_access("read")
+                        action = target_model.browse(res_id)
+                        action.check_access("read")
+                    except AccessError:
+                        continue
+                    if not action.exists() or action.tag != record.client_action_tag:
+                        continue
+                items.append(
+                    {
+                        "id": record.id,
+                        "model": model,
+                        "model_name": model_names.get(model, model),
+                        "res_id": res_id,
+                        "display_name": record.client_action_name or record.client_action_tag,
+                        "viewed_at": record.viewed_at,
+                        "icon_url": client_action_icons.get(res_id)
+                        or model_icons.get(model)
+                        or "/view_history/static/description/icon.png",
+                        "is_client_action": True,
+                        "action_id": res_id or False,
+                        "action_tag": record.client_action_tag,
+                        "action_params": record.client_action_params or {},
+                        "action_context": record.client_action_context or {},
+                        "action_path": record.client_action_path or False,
+                        "action_target": record.client_action_target or False,
+                    }
+                )
                 continue
             if res_id == 0:
                 try:

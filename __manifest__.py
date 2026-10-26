@@ -8,8 +8,9 @@ searching for it again.
 
 Features
 --------
-* Automatically records opened form views and list views. List history is only recorded
-  when you have read access to the model.
+* Automatically records opened form and list views, plus OWL client-action screens.
+  List history is only recorded when you have read access to the model.
+* Uses a client action's visible menu icon in history when one is configured.
 * Shows up to 100 recent entries in a backend systray dropdown, with record names and
   available model or record icons.
 * Opens a record directly from its history entry; list-view entries return to the
@@ -37,6 +38,7 @@ new entries. This setting does not affect other users.
         'web.assets_backend': [
             'view_history/static/src/view_history_systray.css',
             'view_history/static/src/form_view_logger.js',
+            'view_history/static/src/client_action_logger.js',
             'view_history/static/src/view_history_systray.xml',
             'view_history/static/src/view_history_systray.js',
         ],
